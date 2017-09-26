@@ -1,0 +1,249 @@
+.\"	$OpenBSD$
+.\"
+.\" Copyright (c) 2017 Aaron Poffenberger <akp@hypernote.com>
+.\"
+.\" Permission to use, copy, modify, and distribute this software for any
+.\" purpose with or without fee is hereby granted, provided that the above
+.\" copyright notice and this permission notice appear in all copies.
+.\"
+.\" THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+.\" WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+.\" MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+.\" ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+.\" WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+.\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+.\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+.\"
+.Dd $Mdocdate: Sep 23 2017 $
+.Dt NETCTL 8
+.Os
+.Sh NAME
+.Nm netctl
+.Nd configure and control hostname.if definitions
+.Sh SYNOPSIS
+.Nm netctl
+.Op Fl h
+.Nm netctl
+.Cm create|delete
+.Ar location ...
+.Nm netctl
+.Op Fl dr
+.Cm switch
+.Ar location
+.Op Ar interface ...
+.Nm netctl
+.Cm enable|disable
+.Op Ar configuration ...
+.Nm netctl
+.Cm start|stop|restart
+.Op Ar interface ...
+.Nm netctl
+.Op Fl v
+.Cm scan
+.Op Ar interface ...
+.Sh DESCRIPTION
+The
+.Nm
+utility is used to manage network locations, interface configuration
+files, and to start, stop, or restart interfaces.
+.Pp
+.Nm
+works with
+.Xr ifconfig 8
+and
+.Xr netstart 8 .
+It does not replace them.
+.Pp
+The following options are available:
+.Bl -tag -width Ds
+.It Fl h
+Help message.
+.It Ar location
+The
+.Ar location
+parameter is the name of a collection of related
+.Ar interface
+configuration files.
+.Pp
+.Nm
+locations are stored as directories in
+.Pa /etc/hostname.d .
+See
+.Sx FILES .
+.Pp
+.Sy N.B .
+May not include network pseudo-devices.
+.It Ar configuration
+The
+.Ar configuration
+parameter is a
+.Xr hostname.if 5
+file in a
+.Ar location
+directory.
+See
+.Sx FILES .
+.It Ar interface
+The
+.Ar interface
+parameter is an interface
+.Dq name unit
+as defined in
+.Xr ifconfig 8
+which includes groups.
+.El
+.Sh LOCATION
+The following commands are available for working with network locations:
+.Bl -tag -width Ds
+.It Cm create Ar location ...
+Create one or more locations.
+.It Cm delete Ar location ...
+Delete one or more locations.
+.Pp
+.Sy N.B .
+Deletes all
+.Ar interface
+.Ar configuration
+files in
+.Ar location .
+.It Oo Fl dr Oc Cm switch Ar location Oo Ar interface ... Oc
+Switch to
+.Ar location .
+.It Fl d
+Delete
+.Pa /etc/hostname.if
+not found in
+.Ar location .
+.Pp
+.Sy N.B .
+Does not affect actual interface.
+Removes symlink from previous location.
+Otherwise the symlink to the previous location configuration is left in place.
+.Pp
+.Sy Default :
+leave in place.
+.It Fl r
+Restart the interface(s) after switching.
+.El
+.Sh CONFIGURATION
+The following commands are available for working with interface configurations:
+.Bl -tag -width Ds
+.It Cm enable Ar configuration ...
+Enable an interface
+.Ar configuration .
+.It Cm disable Ar configuration ...
+Disable an interface
+.Ar configuration .
+.El
+.Sh INTERFACE
+The following commands are available for working with interfaces:
+.Bl -tag -width Ds
+.It Cm start Op Ar interface ...
+Start one or more interfaces.
+.It Cm stop Op Ar interface ...
+Stop one or more interfaces.
+.It Cm restart Op Ar interface ...
+Restart one or more interfaces.
+.It Oo Fl v Oc Cm scan Op Ar interface ...
+Scan for wireless access point with one or more interfaces.
+.It Fl v
+Verbose scan.
+.It Fl vv
+Detailed scan (Same as
+.Cm ifconfig Ar if Ar scan Ns
+).
+.El
+.Sh ENVIRONMENT
+.Bl -tag -width MANPATHX
+.It Ev HN_DIR
+Directory to find
+.Ar location
+directories and interface configuration files.
+.El
+.Sh FILES
+.Bl -tag -width "/etc/hostname.d/*/hostname.XXX" -compact
+.It Pa /etc/hostname.d
+default
+.Ar location
+directory.
+.Pp
+.It Pa /etc/hostname.d/*/hostname.XXX
+interface-specific
+.Ar configuration
+files by location.
+.El
+.Sh EXAMPLES
+Create new location:
+.Bd -literal -offset indent
+$ doas netctl create home
+.Ed
+.Pp
+Start
+.Ar em0 :
+.Bd -literal -offset indent
+$ doas netctl start em0
+.Ed
+.Pp
+Switch location and restart all interfaces:
+.Bd -literal -offset indent
+netctl -r switch home
+.Ed
+.Pp
+Switch location and restart
+.Ar iwm0 :
+.Bd -literal -offset indent
+$ doas netctl -r switch home iwm0
+.Ed
+.Pp
+Switch location and remove unconfigured interfaces:
+.Bd -literal -offset indent
+$ ls /etc/hostname.{em,iwm}0
+/etc/hostname.em0@   /etc/hostname.iwm0@
+
+$ ls /etc/hostname.d/work
+/etc/hostname.d/work/hostname.iwm0
+
+$ doas netctl -d switch work
+
+$ ls /etc/hostname.{em,iwm}0
+/etc/hostname.iwm0@
+.Ed
+.Pp
+Scan for wireless access points with
+.Ar iwm0 :
+.Bd -literal -offset indent
+$ doas netctl -v scan iwm0
+iwm0:
+	supersecurewap
+	notsosecurewap
+	"Silly Wap"
+.Ed
+.Sh DIAGNOSTICS
+.Nm
+utility always exits 0.
+.Sh SEE ALSO
+.Xr hostname.if 5 ,
+.Xr ifconfig 8 ,
+.Xr netstart 8
+.Sh HISTORY
+.Nm
+is a new utility but it draws inspiration and style from
+.Xr rcctl 8
+and
+.Xr netstart 8 .
+.Pp
+A great deal of credit is due to Antoine Jacoutot, Ingo Schwarze, and
+Robert Nagy for their work on 
+.Xr rcctl 8
+and
+.Xr netstart 8 .
+.Sh AUTHORS
+.An -nosplit
+The
+.Nm
+utility was written by
+.An Aaron Poffenberger Aq Mt akp@hypernote.com .
+.Sh BUGS
+.Nm
+should work with some network pseudo-devices like
+.Xr trunk 4 .

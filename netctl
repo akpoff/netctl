@@ -1,0 +1,341 @@
+#!/bin/sh
+#
+# $OpenBSD$
+#
+# Copyright (c) 2017 Aaron Poffenberger <akp@hypernote.com>
+#
+# Permission to use, copy, modify, and distribute this software for any
+# purpose with or without fee is hereby granted, provided that the above
+# copyright notice and this permission notice appear in all copies.
+#
+# THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+# WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+# MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+# ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+# WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+# cmd OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS cmd, ARISING OUT OF
+# OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+#
+
+# Turn off Strict Bourne shell mode.
+set +o sh
+
+readonly __progname="netctl"
+readonly TRUE=0
+readonly FALSE=1
+readonly HN_DIR=${HN_DIR:-/etc/hostname.d}
+
+# Log an error
+# Usage: log_err msg [exit code]
+# Cheerfully copied from rc.subr(8)
+# Copyright (c) 2010, 2011, 2014-2017 Antoine Jacoutot <ajacoutot@openbsd.org>
+# Copyright (c) 2010, 2011 Ingo Schwarze <schwarze@openbsd.org>
+# Copyright (c) 2010, 2011, 2014 Robert Nagy <robert@openbsd.org>
+log_err() {
+	[ -n "${1}" ] && echo "${1}" 1>&2
+	[ -n "${2}" ] && exit "${2}" || exit 1
+}
+
+# Log a message
+# Usage: log_msg msg [right justify length]
+log_msg() {
+	local -R${2:-0} _msg="${1}"
+
+	[ -n "${_msg}" ] && echo "${_msg}"
+}
+
+# Log a message to stdout or stderr
+# Usage: usage [2]
+usage() {
+	echo \
+	"usage:  netctl [-h]
+	netctl ls [lsarg ...]
+	netctl create|delete location ...
+	netctl [-dr] switch location [interface ...]
+	netctl enable|disable [configuration ...]
+	netctl start|stop|restart [interface ...]
+	netctl [-v] scan [interface ...]" 1>&${1:-1}
+}
+
+# Get interface configuration
+# Expects variables to be typeset/local from calling fn
+# Usage: get_if_conf if1
+get_if_conf() {
+	# use co-process to preserve values set in while loop
+	ifconfig $1 |&
+	while IFS=' 	' read -r -p _l; do
+		_key=${_l%%*([[:blank:]])*(:) *}
+		_val=${_l##*([[:blank:]])*${_key}*(:)*([[:blank:]])}
+
+		[[ ${_key} == 'groups' ]] && _groups=${_val}
+		[[ ${_key} == 'media' ]] && _media=${_val}
+		[[ ${_key} == 'status' ]] && _status=${_val}
+		[[ ${_key} == 'ieee80211' ]] && _ieee80211=${_val}
+		[[ ${_key} == 'inet' ]] && _inet=${_val}
+		[[ ${_key} == 'inet6' ]] && _inet6=${_val}
+	done
+}
+
+# Get interfaces
+# Expects variable _ifs to be typeset/local from calling fn
+# Usage: get_ifs if1
+get_ifs() {
+	local _if _excl_keys
+	# exclude network pseudo-devices
+	set -A _pseudo_devices $(ifconfig -C)
+
+	# use co-process to preserve values set in while loop
+	ifconfig $1 |&
+	while IFS=' 	' read -r -p _l; do
+		[[ "${_l}" == *flags* ]] || continue
+
+		_if=${_l%%*([[:blank:]])*():*}
+
+		[ -z "${_if}" ] && continue
+
+		#_if=${_l%%*([[:blank:]])*():*}
+
+		# exclude if-type (san _if num) in pseudo-devices
+		[[ " ${_pseudo_devices[*]}0 " == *" ${_if%%*([[:digit:]])} "* ]] &&
+			continue
+
+		_ifs[${#_ifs[*]}]="${_if}"
+	done
+
+	[ -n "${_ifs}" ] || return 1
+}
+
+# Restart interface
+# Usage: if_restart if1
+if_restart() {
+	if_stop $1 && if_start $1
+}
+
+# Start interface
+# Usage: if_start if1
+if_start() {
+	local _if
+
+	_if=$1
+	[ ${dryrun} -eq 1 ] &&
+		log_msg /bin/sh /etc/netstart -p ${_if} ||
+			/bin/sh /etc/netstart ${_if}
+}
+
+# Stop interface
+# Usage: if_stop if1
+if_stop() {
+	local _options _groups _media _status _ieee80211 _inet _inet6 \
+	      _key _wlan_keys _inet_keys _mode_keys _if
+
+	set -A _wlan_keys -- nwid chan mode nwkey powersave wpakey wpa
+
+	_if=$1
+	get_if_conf ${_if}
+
+	# remove mode if the interface is wireless
+	[ -n "${_ieee80211}" ] && _options="${_options} -mode"
+
+	for _key in ${_wlan_keys[*]} ; do
+		[[ "${_ieee80211}" == *"${_key}"* ]] &&
+			_options="${_options} -${_key}"
+	done
+
+	[ -n "${_inet}" ] && _options="${_options} -inet"
+	[ -n "${_inet6}" ] && _options="${_options} -inet6"
+
+	[ ${dryrun} -eq 1 ] &&
+		log_msg ifconfig ${_if} ${_options} down ||
+			ifconfig ${_if} ${_options} down
+}
+
+# Get interface details
+# Expects variable _nwids to be typeset/local from calling fn
+# Usage: scan if1
+scan() {
+	local _nwid _i _iselem _if _verbose
+
+	_if=$1
+	_verbose=$2
+	# use co-process to preserve values set in while loop
+	ifconfig ${_if} scan |&
+	while IFS=' 	' read -r -p _l ; do
+		[[ "${_l}" == *([[:blank::]])nwid* ]] || continue
+
+		[[ "${_verbose:-0}" -eq 1 ]] &&
+			_nwids[${#_nwids[*]}]="${_l%%*([[:blank:]])*()% *}%" &&
+			continue
+
+		[[ "${_verbose:-0}" -eq 2 ]] &&
+			_nwids[${#_nwids[*]}]="${_l}" &&
+			continue
+
+		_nwid=${_l%%*([[:blank:]])*()chan *}
+		_nwid=${_nwid##*nwid *()}
+
+		[[ ${_nwid} == '""' ]] && continue
+
+
+		_iselem=0 && _i=0
+		while ((_i < ${#_nwids[*]})) ; do
+			[[ "${_nwids[_i]}" == "${_nwid}" ]] &&
+				_iselem=1 && break
+			((_i++))
+		done
+		[ ${_iselem} -eq 0 ] && _nwids[${#_nwids[*]}]="${_nwid}"
+	done
+
+	[ -n "${_nwids}" ] || return 1
+}
+
+typeset -i delete=0 dryrun=0 restart=0 verbose=0
+while getopts :dhnqrv opt ; do
+	case ${opt} in
+		d)
+			delete=1;;
+		h)
+			usage
+			exit
+			;;
+		n)
+			dryrun=1;;
+		q)
+			quiet=1;;
+		r)
+			restart=1;;
+		v)
+			((verbose++))
+			cmd="scan";;
+		:)
+			log_msg ${__progname}: option requires an argument \
+				-- ${OPTARG}
+			usage 2
+			exit
+			;;
+		\?)
+			log_msg ${__progname}: invalid option -- ${OPTARG}
+			usage 2
+			exit
+			;;
+	esac
+done
+shift $(( OPTIND - 1 ))
+cmd=$1
+
+case ${cmd} in
+	create)
+		shift 1
+		locations="$@"
+		;;
+	delete)
+		shift 1
+		locations="$@"
+		;;
+	switch)
+		shift 1
+		location="$1"
+		[ -d "${HN_DIR}/${location}" ] || usage 1
+		shift 1
+		ifs="$@"
+		get_ifs ${ifs} # throws its own errors
+		ifs="${_ifs[@]}"
+		;;
+	enable|disable|start|stop|restart)
+		shift 1
+		ifs="$@"
+		get_ifs ${ifs} # throws its own errors
+		ifs="${_ifs[@]}"
+		;;
+	scan)
+		shift 1
+		ifs="$@"
+		get_ifs "${ifs:-wlan}" # throws its own errors
+		ifs="${_ifs[@]}"
+		;;
+	*)
+		usage 2
+		;;
+esac
+
+case ${cmd} in
+	create)
+		for _loc in ${locations} ; do
+			mkdir -p "${HN_DIR}/${_loc}" ||
+				log_err "Unable to create location ${_loc}" 3
+		done
+		;;
+	delete)
+		for _loc in ${locations} ; do
+			rm -rf "${HN_DIR}/${_loc}" ||
+				log_err "Unable to delete location ${_loc}" 3
+		done
+		;;
+	switch)
+		for _if in ${ifs} ; do
+			_from="${HN_DIR}/${location}/hostname.${_if}"
+			_to="/etc/hostname.${_if}.disabled"
+			[ -f "${_to}" ] ||
+				_to="/etc/hostname.${_if}"
+
+			[ ! -f "${_from}" ] &&
+				[ ${delete} -eq 1 ] &&
+				rm -f "${_to}" &&
+				continue
+
+			[ -f "${_from}" ] &&
+				ln -fs "${_from}" "${_to}" ||
+					log_err "Unable to switch ${_if} from ${location}" 3
+
+			[ -f "${_to}" ] &&
+				[ ${restart} -eq 1 ] &&
+				if_restart ${_if}
+		done
+		;;
+	enable)
+		for _if in ${ifs} ; do
+			_from="/etc/hostname.${_if}.disabled"
+			_to="/etc/hostname.${_if}"
+			[ -f "${_from}" ] && ! [ -f "${_to}" ] &&
+				mv "${_from}" "${_to}" ||
+					log_err "Unable to enable ${_if}" 3
+		done
+		;;
+	disable)
+		for _if in ${ifs} ; do
+			_from="/etc/hostname.${_if}"
+			_to="/etc/hostname.${_if}.disabled"
+			[ -f "${_from}" ] && ! [ -f "${_to}" ] &&
+				mv "${_from}" "${_to}" ||
+					log_err "Unable to disable ${_if}" 3
+		done
+		;;
+	start)
+		for _if in ${ifs} ; do
+			if_start ${_if}
+		done
+		;;
+	stop)
+		for _if in ${ifs} ; do
+			if_stop ${_if}
+		done
+		;;
+	restart)
+		for _if in ${ifs} ; do
+			if_restart ${_if}
+		done
+		;;
+	scan)
+		local _nwids
+		set -A _nwids
+		for _if in ${ifs} ; do
+			log_msg "${_if}:"
+			scan ${_if} ${verbose}
+			for _nwid in "${_nwids[@]}" ; do
+				log_msg "\t${_nwid}"
+			done
+		done
+		;;
+	*)
+		usage 2
+		;;
+esac

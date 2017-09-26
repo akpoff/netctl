@@ -24,6 +24,9 @@
 .Nm netctl
 .Op Fl h
 .Nm netctl
+.Cm ls
+.Op Ar lsarg ...
+.Nm netctl
 .Cm create|delete
 .Ar location ...
 .Nm netctl
@@ -58,6 +61,22 @@ The following options are available:
 .Bl -tag -width Ds
 .It Fl h
 Help message.
+.It Cm ls Op Ar lsarg ...
+Display a list of locations, configurations and interfaces matching
+.Ar lsarg ,
+which can be one of:
+.Bl -tag -width "interfaces" -offset indent -compact
+.It Cm all
+all locations, configurations and interfaces
+.It Cm locations
+all locations
+.It Cm configurations Op Ar location ...
+all configurations for the current
+.Ar location
+or locations
+.It Cm interfaces
+all interfaces (exluding pseudo-devices)
+.El
 .It Ar location
 The
 .Ar location
@@ -233,7 +252,7 @@ and
 .Xr netstart 8 .
 .Pp
 A great deal of credit is due to Antoine Jacoutot, Ingo Schwarze, and
-Robert Nagy for their work on 
+Robert Nagy for their work on
 .Xr rcctl 8
 and
 .Xr netstart 8 .
@@ -245,5 +264,7 @@ utility was written by
 .An Aaron Poffenberger Aq Mt akp@hypernote.com .
 .Sh BUGS
 .Nm
-should work with some network pseudo-devices like
+should prevent users from running commands that require superuser.
+.Nm
+should al work with some network pseudo-devices like
 .Xr trunk 4 .

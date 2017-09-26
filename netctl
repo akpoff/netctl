@@ -105,6 +105,31 @@ get_ifs() {
 	[ -n "${_ifs}" ] || return 1
 }
 
+get_locations() {
+	local _l
+
+	ls -p "${HN_DIR}" |&
+	# use co-process to preserve values set in while loop
+	while IFS='	 ' read -r -p _l ; do
+		[[ "${_l}" == *([[:blank:]])*/ ]] || continue
+		_locations[${#_locations[*]}]="${_l%%/}"
+	done
+}
+
+get_configurations() {
+	local _l _location
+
+	_location="$1"
+
+	ls -p "${HN_DIR}/${_location}" |&
+	# use co-process to preserve values set in while loop
+	while IFS='	 ' read -r -p _l ; do
+		[[ "${_l}" == *([[:blank:]])*[!/] ]] || continue
+
+		_configurations[${#_configurations[*]}]="${_l}"
+	done
+}
+
 # Restart interface
 # Usage: if_restart if1
 if_restart() {
@@ -147,6 +172,51 @@ if_stop() {
 	[ ${dryrun} -eq 1 ] &&
 		log_msg ifconfig ${_if} ${_options} down ||
 			ifconfig ${_if} ${_options} down
+}
+
+ls_locations() {
+	local _l _locations
+	set -A _locations
+
+	get_locations
+
+	log_msg "locations:"
+	for _l in "${_locations[@]}" ; do
+		log_msg "\t${_l}"
+	done
+}
+
+ls_configurations(){
+	local _c _configurations _l _locations
+	set -A _locations
+	set -A _configurations
+
+	[[ -n "$@" ]] && set -A _locations "$@" ||
+			get_locations
+
+	log_msg "configurations:"
+	for _l in "${_locations[@]}" ; do
+		get_configurations "${_l}"
+
+		log_msg "\t${_l}:"
+		for _c in "${_configurations[@]}" ; do
+			log_msg "\t\t${_c}"
+		done
+
+		set -A _configurations
+	done
+}
+
+ls_interfaces(){
+	local _if _ifs
+	set -A _ifs
+
+	get_ifs
+
+	log_msg "interfaces:"
+	for _if in "${_ifs[@]}" ; do
+		log_msg "\t${_if}"
+	done
 }
 
 # Get interface details
@@ -223,6 +293,14 @@ shift $(( OPTIND - 1 ))
 cmd=$1
 
 case ${cmd} in
+	ls)
+		shift 1
+		lsarg="$1"
+		shift 1
+		lsparms="$@"
+		[[ ${lsarg} == @(all|locations|configurations|interfaces) ]] ||
+			usage 2
+		;;
 	create)
 		shift 1
 		locations="$@"
@@ -234,7 +312,7 @@ case ${cmd} in
 	switch)
 		shift 1
 		location="$1"
-		[ -d "${HN_DIR}/${location}" ] || usage 1
+		[ -d "${HN_DIR}/${location}" ] || usage 2
 		shift 1
 		ifs="$@"
 		get_ifs ${ifs} # throws its own errors
@@ -258,6 +336,25 @@ case ${cmd} in
 esac
 
 case ${cmd} in
+	ls)
+		case ${lsarg} in
+			all)
+				ls_locations
+				ls_configurations
+				ls_interfaces
+				;;
+			locations)
+				ls_locations
+				;;
+			configurations)
+				ls_configurations ${lsparms};;
+			interfaces)
+				ls_interfaces;;
+			*)
+				usage 2
+				;;
+		esac
+		;;
 	create)
 		for _loc in ${locations} ; do
 			mkdir -p "${HN_DIR}/${_loc}" ||

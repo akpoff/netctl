@@ -59,7 +59,8 @@ usage() {
 	netctl create|delete location ...
 	netctl [-dr] switch location [interface ...]
 	netctl enable|disable [configuration ...]
-	netctl start|stop|restart [interface ...]
+	netctl [-a] start|restart [interface ...]
+	netctl stop [interface ...]
 	netctl [-v] scan [interface ...]" 1>&${1:-1}
 }
 
@@ -292,9 +293,36 @@ scan() {
 	[ -n "${_nwids}" ] || return 1
 }
 
-typeset -i delete=0 dryrun=0 restart=0 verbose=0
-while getopts :dhnqrv opt ; do
+# Match scanned access points with first known wap
+# Usage: wap_match if1
+wap_match() {
+	local _if _nwids _nwid _path _paths
+	set -A _paths -- ${HN_DIR}/nwids/*.nwid
+
+	_if=$1
+
+	[ -z "${_paths}" ] &&
+		log_warning "No known waps found." &&
+		return 1
+
+	scan ${_if}
+	for _path in "${_paths[@]}" ; do
+		_nwid=${_path##*([[:blank:]])${HN_DIR}/nwids/}
+		_nwid=${_nwid%%.nwid}
+		[[ "${_nwid}" == *[[:blank:]]* ]] &&
+			_nwid="\"${_nwid}\""
+		[[ " ${_nwids[*]} " == *" ${_nwid} "* ]] &&
+			log_msg "Found ${_nwid}" &&
+			_match=${_path} &&
+			return
+	done
+}
+
+typeset -i autowap=0 delete=0 dryrun=0 restart=0 verbose=0
+while getopts :adhnqrv opt ; do
 	case ${opt} in
+		a)
+			autowap=1;;
 		d)
 			delete=1;;
 		h)
@@ -352,11 +380,30 @@ case ${cmd} in
 		get_ifs ${ifs} # throws its own errors
 		ifs="${_ifs[@]}"
 		;;
-	enable|disable|start|stop|restart)
+	enable|disable|stop)
 		shift 1
 		ifs="$@"
 		get_ifs ${ifs} # throws its own errors
 		ifs="${_ifs[@]}"
+		;;
+	start|restart)
+		shift 1
+		ifs="$@"
+		if [ ${autowap} -eq 1 ] && [ -z "${ifs}" ] ; then
+			get_ifs wlan # throws its own errors
+			ifs="${_ifs[@]}"
+		elif [ ${autowap} -eq 1 ] && [ -n "${ifs}" ] ; then
+			# Check whether $ifs are in wlan group
+			get_ifs wlan # throws its own errors
+			for _if in ${ifs} ; do
+				[[ " ${_ifs} " == *" ${_if} "* ]] &&
+					continue ||
+						log_err "${_if} not in wlan group" 3
+			done
+		else
+			get_ifs ${ifs} # throws its own errors
+			ifs="${_ifs[@]}"
+		fi
 		;;
 	scan)
 		shift 1

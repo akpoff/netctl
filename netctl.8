@@ -38,7 +38,11 @@
 .Cm enable|disable
 .Op Ar configuration ...
 .Nm netctl
-.Cm start|stop|restart
+.Op Fl a
+.Cm start|restart
+.Op Ar interface ...
+.Nm netctl
+.Cm stop
 .Op Ar interface ...
 .Nm netctl
 .Op Fl v
@@ -157,12 +161,16 @@ Disable an interface
 .Sh INTERFACE
 The following commands are available for working with interfaces:
 .Bl -tag -width Ds
-.It Cm start Op Ar interface ...
+.It Oo Fl a Oc Cm start Op Ar interface ...
 Start one or more interfaces.
+.It Fl a
+If the interface is in the wlan group, try to connect to a known wireless access point.
 .It Cm stop Op Ar interface ...
 Stop one or more interfaces.
-.It Cm restart Op Ar interface ...
+.It Oo Fl a Oc Cm restart Op Ar interface ...
 Restart one or more interfaces.
+.It Fl a
+If the interface is in the wlan group, try to connect to a known wireless access point.
 .It Oo Fl v Oc Cm scan Op Ar interface ...
 Scan for wireless access point with one or more interfaces.
 .It Fl v
@@ -180,7 +188,7 @@ Directory to find
 directories and interface configuration files.
 .El
 .Sh FILES
-.Bl -tag -width "/etc/hostname.d/*/hostname.XXX" -compact
+.Bl -tag -width "/etc/hostname.d/nwids/NAME.nwid" -compact
 .It Pa /etc/hostname.d
 default
 .Ar location
@@ -190,6 +198,15 @@ directory.
 interface-specific
 .Ar configuration
 files by location.
+.Pp
+.It Pa /etc/hostname.d/nwids
+default location for known wireless access point
+.Ar configuration
+files.
+.Pp
+.It Pa /etc/hostname.d/nwids/NAME.nwid
+.Ar configuration
+files for known wireless access points named for the access point (including spaces).
 .El
 .Sh EXAMPLES
 Create new location:
@@ -201,6 +218,20 @@ Start
 .Ar em0 :
 .Bd -literal -offset indent
 $ doas netctl start em0
+.Ed
+.Pp
+Start
+.Ar iwm
+and connect to known wireless access point:
+.Bd -literal -offset indent
+$ doas netctl -a start iwm0
+Found "Silly Wap"
+Switch iwm0
+iwm0: no link ..... got link
+iwm0: DHCPREQUEST to 255.255.255.255
+iwm0: DHCPREQUEST to 255.255.255.255
+iwm0: DHCPACK from 192.168.1.1 (00:00:00:00:00:00)
+iwm0: bound to 192.168.1.41 -- renewal in 3600 seconds
 .Ed
 .Pp
 Switch location and restart all interfaces:

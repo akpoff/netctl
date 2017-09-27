@@ -400,6 +400,8 @@ case ${cmd} in
 		for _if in ${ifs} ; do
 			_from="/etc/hostname.${_if}.disabled"
 			_to="/etc/hostname.${_if}"
+			[ -f "${_from}" ] || continue
+
 			[ -f "${_from}" ] && ! [ -f "${_to}" ] &&
 				mv "${_from}" "${_to}" ||
 					log_warning "Unable to enable ${_if}"
@@ -409,7 +411,9 @@ case ${cmd} in
 		for _if in ${ifs} ; do
 			_from="/etc/hostname.${_if}"
 			_to="/etc/hostname.${_if}.disabled"
-			[ -f "${_from}" ] && ! [ -f "${_to}" ] &&
+			[ -f "${_from}" ] || continue
+
+			[ -f "${_from}" ] &&
 				mv "${_from}" "${_to}" ||
 					log_warning "Unable to disable ${_if}"
 		done

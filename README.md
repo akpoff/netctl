@@ -29,12 +29,13 @@ move or wireless-access points appear and disappear (*.e.g.,* phones
 with tethering).
 
 `netctl` is written in pure shell (using no commands outside of shell,
-/bin and /sbin), so that it can run at boot time when **/usr** may not
-be mounted yet.
+**/bin** and **/sbin**), so that it can run at boot time when **/usr**
+may not be mounted yet.
 
 I think I can get automated location switching working at boot time. I
-already have code from an earlier project that does that. I'm
-rewriting it in pure shell and integrating it.
+already have code from an earlier project that will match wap scans to
+the correct configuration. I'm rewriting it in pure shell and
+integrating it for use during boot.
 
 Copyright and License
 ---------------------

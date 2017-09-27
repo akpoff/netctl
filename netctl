@@ -36,6 +36,12 @@ log_err() {
 	[ -n "${2}" ] && exit "${2}" || exit 1
 }
 
+# Log a warning
+# Usage: log_err msg [exit code]
+log_warning() {
+	log_msg "${1}" 1>&2
+}
+
 # Log a message
 # Usage: log_msg msg [right justify length]
 log_msg() {
@@ -358,13 +364,13 @@ case ${cmd} in
 	create)
 		for _loc in ${locations} ; do
 			mkdir -p "${HN_DIR}/${_loc}" ||
-				log_err "Unable to create location ${_loc}" 3
+				log_warning "Unable to create location ${_loc}"
 		done
 		;;
 	delete)
 		for _loc in ${locations} ; do
 			rm -rf "${HN_DIR}/${_loc}" ||
-				log_err "Unable to delete location ${_loc}" 3
+				log_warning "Unable to delete location ${_loc}"
 		done
 		;;
 	switch)
@@ -380,8 +386,9 @@ case ${cmd} in
 				continue
 
 			[ -f "${_from}" ] &&
-				ln -fs "${_from}" "${_to}" ||
-					log_err "Unable to switch ${_if} from ${location}" 3
+				ln -fs "${_from}" "${_to}" &&
+				log_msg "Switch ${_if}" ||
+					log_warning "No configuration for ${_if}"
 
 			[ -f "${_to}" ] &&
 				[ ${restart} -eq 1 ] &&
@@ -394,7 +401,7 @@ case ${cmd} in
 			_to="/etc/hostname.${_if}"
 			[ -f "${_from}" ] && ! [ -f "${_to}" ] &&
 				mv "${_from}" "${_to}" ||
-					log_err "Unable to enable ${_if}" 3
+					log_warning "Unable to enable ${_if}"
 		done
 		;;
 	disable)
@@ -403,7 +410,7 @@ case ${cmd} in
 			_to="/etc/hostname.${_if}.disabled"
 			[ -f "${_from}" ] && ! [ -f "${_to}" ] &&
 				mv "${_from}" "${_to}" ||
-					log_err "Unable to disable ${_if}" 3
+					log_warning "Unable to disable ${_if}"
 		done
 		;;
 	start)

@@ -24,9 +24,9 @@ See the man page for further details.
 Directions
 ----------
 
-The main feature that's missing is auto-switching location as users
-move or wireless-access points appear and disappear (*.e.g.,* phones
-with tethering).
+The main feature that's missing is auto-wap detection and connecting
+to existing known access points as users move or wireless-access
+points appear and disappear (*.e.g.,* phones with tethering).
 
 `netctl` is written in pure shell (using no commands outside of shell,
 **/bin** and **/sbin**), so that it can run at boot time when **/usr**

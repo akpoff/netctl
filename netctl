@@ -376,9 +376,10 @@ case ${cmd} in
 	switch)
 		for _if in ${ifs} ; do
 			_from="${HN_DIR}/${location}/hostname.${_if}"
-			_to="/etc/hostname.${_if}.disabled"
-			[ -f "${_to}" ] ||
-				_to="/etc/hostname.${_if}"
+			_to="/etc/hostname.${_if}"
+			[ ! -f "${_to}" ] &&
+				[ -f "/etc/hostname.${_if}.disabled" ] &&
+				_to="/etc/hostname.${_if}.disabled"
 
 			[ ! -f "${_from}" ] &&
 				[ ${delete} -eq 1 ] &&

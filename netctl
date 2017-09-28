@@ -430,6 +430,7 @@ case ${cmd} in
 		;;
 	*)
 		usage 2
+		exit
 		;;
 esac
 

@@ -503,15 +503,22 @@ case ${cmd} in
 		done
 		;;
 	start|restart)
-		local _match
+		local _match _groups _media _status _ieee80211 _inet _inet6
 		set -A _match
 
 		for _if in ${ifs} ; do
+			get_if_conf ${_if}
+			# if _if status == "no network" scanning fails
+			# stop the interface and reset
+			[[ "${_status}" == 'no network' ]] &&
+				log_warning "Stopping ${_if} ..." &&
+				if_stop ${_if}
 			wap_match ${_if}
 			[ -n "${_match}" ] || return
 			_to="/etc/hostname.${_if}"
 			link_configuration ${_if} "${_match}" "${_to}"
 			if_restart ${_if}
+			ifconfig ${_if}
 		done
 		;;
 	stop)

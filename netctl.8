@@ -66,20 +66,22 @@ The following options are available:
 .It Fl h
 Help message.
 .It Cm ls Op Ar lsarg ...
-Display a list of locations, configurations and interfaces matching
+Display a list of locations, configurations, interfaces and known wireless access points matching
 .Ar lsarg ,
 which can be one of:
 .Bl -tag -width "interfaces" -offset indent -compact
 .It Cm all
 all locations, configurations and interfaces
-.It Cm locations
-all locations
 .It Cm configurations Op Ar location ...
 all configurations for the current
 .Ar location
 or locations
 .It Cm interfaces
 all interfaces (exluding pseudo-devices)
+.It Cm locations
+all locations
+.It Cm waps
+all known (configured) wireless access points
 .El
 .It Ar location
 The

@@ -118,6 +118,9 @@ get_locations() {
 	ls -p "${HN_DIR}" |&
 	# use co-process to preserve values set in while loop
 	while IFS='	 ' read -r -p _l ; do
+		# skip known nwids, not a location
+		[[ "${_l}" == *nwids* ]] && continue
+		# skip files
 		[[ "${_l}" == *([[:blank:]])*/ ]] || continue
 		_locations[${#_locations[*]}]="${_l%%/}"
 	done
@@ -131,6 +134,7 @@ get_configurations() {
 	ls -p "${HN_DIR}/${_location}" |&
 	# use co-process to preserve values set in while loop
 	while IFS='	 ' read -r -p _l ; do
+		# skip directories
 		[[ "${_l}" == *([[:blank:]])*[!/] ]] || continue
 
 		_configurations[${#_configurations[*]}]="${_l}"
@@ -215,7 +219,7 @@ ls_locations() {
 
 	get_locations
 
-	log_msg "locations:"
+	log_msg "Locations:"
 	for _l in "${_locations[@]}" ; do
 		log_msg "\t${_l}"
 	done
@@ -229,7 +233,7 @@ ls_configurations(){
 	[[ -n "$@" ]] && set -A _locations "$@" ||
 			get_locations
 
-	log_msg "configurations:"
+	log_msg "Configurations:"
 	for _l in "${_locations[@]}" ; do
 		get_configurations "${_l}"
 
@@ -248,9 +252,20 @@ ls_interfaces(){
 
 	get_ifs
 
-	log_msg "interfaces:"
+	log_msg "Interfaces:"
 	for _if in "${_ifs[@]}" ; do
 		log_msg "\t${_if}"
+	done
+}
+
+ls_waps() {
+	local _nwid _path _paths
+	set -A _paths -- ${HN_DIR}/nwids/*.nwid
+	log_msg "Wireless access points (known waps):"
+	for _path in "${_paths[@]}" ; do
+		_nwid=${_path##*([[:blank:]])${HN_DIR}/nwids/}
+		_nwid=${_nwid%%.nwid}
+		log_msg "\t${_nwid}"
 	done
 }
 
@@ -358,9 +373,10 @@ case ${cmd} in
 	ls)
 		shift 1
 		lsarg="$1"
+		[[ -z "$@" ]] && usage 2 && exit
 		shift 1
 		lsparms="$@"
-		[[ ${lsarg} == @(all|locations|configurations|interfaces) ]] ||
+		[[ ${lsarg} == @(all|locations|configurations|interfaces|waps) ]] ||
 			usage 2
 		;;
 	create)
@@ -375,6 +391,7 @@ case ${cmd} in
 		shift 1
 		location="$1"
 		[ -d "${HN_DIR}/${location}" ] || usage 2
+		[[ -z "$@" ]] && usage 2 && exit
 		shift 1
 		ifs="$@"
 		get_ifs ${ifs} # throws its own errors
@@ -423,6 +440,7 @@ case ${cmd} in
 				ls_locations
 				ls_configurations
 				ls_interfaces
+				ls_waps
 				;;
 			locations)
 				ls_locations
@@ -431,6 +449,8 @@ case ${cmd} in
 				ls_configurations ${lsparms};;
 			interfaces)
 				ls_interfaces;;
+			waps)
+				ls_waps;;
 			*)
 				usage 2
 				;;
@@ -477,19 +497,21 @@ case ${cmd} in
 					log_warning "Unable to disable ${_if}"
 		done
 		;;
-	start)
+	start|restart)
+		local _match
+		set -A _match
+
 		for _if in ${ifs} ; do
-			if_start ${_if}
+			wap_match ${_if}
+			[ -n "${_match}" ] || return
+			_to="/etc/hostname.${_if}"
+			link_configuration ${_if} "${_match}" "${_to}"
+			if_restart ${_if}
 		done
 		;;
 	stop)
 		for _if in ${ifs} ; do
 			if_stop ${_if}
-		done
-		;;
-	restart)
-		for _if in ${ifs} ; do
-			if_restart ${_if}
 		done
 		;;
 	scan)

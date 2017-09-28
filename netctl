@@ -311,7 +311,7 @@ scan() {
 # Match scanned access points with first known wap
 # Usage: wap_match if1
 wap_match() {
-	local _if _nwids _nwid _path _paths
+	local _if _nwids _nwid _path _paths _wap _waps
 	set -A _paths -- ${HN_DIR}/nwids/*.nwid
 
 	_if=$1
@@ -320,15 +320,19 @@ wap_match() {
 		log_warning "No known waps found." &&
 		return 1
 
-	scan ${_if}
 	for _path in "${_paths[@]}" ; do
-		_nwid=${_path##*([[:blank:]])${HN_DIR}/nwids/}
-		_nwid=${_nwid%%.nwid}
-		[[ "${_nwid}" == *[[:blank:]]* ]] &&
-			_nwid="\"${_nwid}\""
-		[[ " ${_nwids[*]} " == *" ${_nwid} "* ]] &&
-			log_msg "Found ${_nwid}" &&
-			_match=${_path} &&
+		_wap=${_path##*([[:blank:]])${HN_DIR}/nwids/}
+		_wap=${_wap%%.nwid}
+		_waps[${#_waps[*]}]="${_wap}"
+	done
+
+	scan ${_if}
+	for _nwid in "${_nwids[@]}" ; do
+		_nwid=${_nwid##\"}
+		_nwid=${_nwid%%\"}
+		[[ " ${_waps[*]} " == *" ${_nwid} "* ]] &&
+			log_msg "Found '${_nwid}'" &&
+			_match="${HN_DIR}/nwids/${_nwid}.nwid" &&
 			return
 	done
 }

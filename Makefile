@@ -1,8 +1,9 @@
 PREFIX ?= /usr/local
 
 install:
-	cp netctl	 "$(PREFIX)/bin/"
-	cp netctl.8	   "$(PREFIX)/man/man8/"
+	cp netctl	"$(PREFIX)/bin/"
+	cp netctl.8	"$(PREFIX)/man/man8/"
+	mkdir -p /etc/hostname.d/nwids
 
 remove:
 	rm -f "$(PREFIX)/bin/netctl"

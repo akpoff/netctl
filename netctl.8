@@ -270,11 +270,34 @@ iwm0:
 	notsosecurewap
 	"Silly Wap"
 .Ed
+.Pp
+Simple integration with
+.Xr apmd 8
+might look like:
+.Bd -literal -offset indent
+$ ls -l
+lrwxr-xr-x  1 root  wheel    7 Sep 20 16:23 powerup@ -> suspend
+lrwxr-xr-x  1 root  wheel    7 Sep 20 16:23 resume@ -> suspend
+-rwxr--r--  1 root  wheel  225 Sep 27 20:41 suspend*
+
+$ cat /etc/apm/suspend
+#!/bin/sh
+
+cmd="${0##*([[:blank:]])/etc/apm/}"
+case "${cmd}" in
+		powerup|resume)
+				/usr/local/bin/netctl -a restart
+				;;
+		*)
+		;;
+esac
+.Ed
 .Sh DIAGNOSTICS
 .Nm
 utility always exits 0.
 .Sh SEE ALSO
 .Xr hostname.if 5 ,
+.Xr apmd 8 ,
 .Xr ifconfig 8 ,
 .Xr netstart 8
 .Sh HISTORY

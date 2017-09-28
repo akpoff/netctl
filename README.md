@@ -10,6 +10,7 @@ utility to make managing locations easier. `netstart` and `ifconfig`
 still do the work. `netctl` makes the user's life, especially portable
 users, easier.
 
+
 Features
 --------
 + Create, delete and switch between **locations** (including restarting
@@ -33,6 +34,7 @@ variable.
 `make install` will also create **/etc/hostname.d/** and
 **/etc/hostname.d/nwids/**
 
+
 Locations
 ---------
 
@@ -45,6 +47,7 @@ netctl create location_name`. `netctl` will **not** at this time
 create the **hostname.if** files. They have to be created the same
 ways as documented in `hostname.if(5)`. See the `man` page for more
 details.
+
 
 Auto Detecting and Joining Networks
 -----------------------------------
@@ -75,6 +78,31 @@ results with the names of the **nwids** found by `ls`-ing
 is specified after the **start** parameter.
 
 
+Auto Detecting and Joining Networks When Resuming
+-------------------------------------------------
+
+`netctl` is not a daemon so it doesn't know when a computer has
+resumed from sleep. `apmd(8)` does know and will call a script called
+**resume** if it exists in **/etc/apm** and is executable.
+
+A simple script like the following will work where the script is
+called **suspend** and the other scripts are symlinked to it (see the
+**man** page for `apmd(8)`):
+
+```
+#!/bin/sh
+
+cmd="${0##*([[:blank:]])/etc/apm/}"
+case "${cmd}" in
+		powerup|resume)
+				/usr/local/bin/netctl -a restart
+				;;
+		*)
+		;;
+esac
+```
+
+
 TODO
 ----
 
@@ -82,7 +110,7 @@ TODO
 + Create hostname.if files in locations
 
 
-Maybe Todo
+Maybe TODO
 ----------
 + Set and get values in hostname.if files. *E.g.,*
 ```

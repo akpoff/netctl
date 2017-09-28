@@ -33,7 +33,8 @@ variable.
 `make install` will also create **/etc/hostname.d/** and
 **/etc/hostname.d/nwids/**
 
-### Locations
+Locations
+---------
 
 `netctl` works by symlinking **hostname.if** files in location
 directories to **/etc/hostname.if** so that the normal `netstart(8)`
@@ -45,7 +46,8 @@ create the **hostname.if** files. They have to be created the same
 ways as documented in `hostname.if(5)`. See the `man` page for more
 details.
 
-### Auto Detecting and Joining Networks
+Auto Detecting and Joining Networks
+-----------------------------------
 
 Auto detecting and joining requires some setup. `netctl` will not
 connect to wireless access points that are not known. To create a
@@ -69,7 +71,7 @@ local network (with `ifconfig iwm0 scan`) and attempt to match the
 results with the names of the **nwids** found by `ls`-ing
 **/etc/hostname.d/nwids**.
 
-**N.B.** `ifconfig scan` is calle dwith *each* wlan device unless one
+**N.B.** `ifconfig scan` is called dwith *each* wlan device unless one
 is specified after the **start** parameter.
 
 

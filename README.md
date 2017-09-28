@@ -23,6 +23,56 @@ Features
 See the man page for further details.
 
 
+Install
+-------
+
+There's no installer for `netctl` at the moment. `doas make install`
+will install to **/usr/local** unless you override the PREFIX
+variable.
+
+`make install` will also create **/etc/hostname.d/** and
+**/etc/hostname.d/nwids/**
+
+### Locations
+
+`netctl` works by symlinking **hostname.if** files in location
+directories to **/etc/hostname.if** so that the normal `netstart(8)`
+code can do what it already does well.
+
+`netctl` will create **location** directories for you by calling `doas
+netctl create location_name`. `netctl` will **not** at this time
+create the **hostname.if** files. They have to be created the same
+ways as documented in `hostname.if(5)`. See the `man` page for more
+details.
+
+### Auto Detecting and Joining Networks
+
+Auto detecting and joining requires some setup. `netctl` will not
+connect to wireless access points that are not known. To create a
+*known* wap, a standard wireless **hostname.if** files should be
+created in **/etc/hostname.d/nwids**. *E.g.,*
+
+```
+	$ cat /etc/hostname.d/nwids/Silly\ Wap.nwid
+	nwid "Silly Wap"
+	wpakey '$w@pau7h99'
+	dhcp
+```
+
+The filename **must** be the same as the **nwid** in the file which
+**must** match the **ESSID** of the wireless access point. Any valid
+configuration directive `ifconfig(8)` will accept may be placed in the
+file.
+
+Executing `doas netctl -a start iwm0` will cause `netctl` to scan the
+local network (with `ifconfig iwm0 scan`) and attempt to match the
+results with the names of the **nwids** found by `ls`-ing
+**/etc/hostname.d/nwids**.
+
+**N.B.** `ifconfig scan` is calle dwith *each* wlan device unless one
+is specified after the **start** parameter.
+
+
 TODO
 ----
 

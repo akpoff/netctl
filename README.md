@@ -16,9 +16,9 @@ Features
   **interfaces**)
 + Enable and disable **configurations**.
 + Start, stop and restart **interfaces**.
-+ Detect and join known wireless networks.
++ Detect and join known wireless networks (**waps**).
 + Scan for wireless access points.
-+ List **locations**, **configurations**, and **interfaces**.
++ List **locations**, **configurations**, **interfaces**, and **waps**.
 
 See the man page for further details.
 

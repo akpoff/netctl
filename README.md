@@ -16,17 +16,35 @@ Features
   **interfaces**)
 + Enable and disable **configurations**.
 + Start, stop and restart **interfaces**.
++ Detect and join known wireless networks.
 + Scan for wireless access points.
 + List **locations**, **configurations**, and **interfaces**.
 
 See the man page for further details.
 
-Directions
-----------
 
-The main feature that's missing is auto-wap detection and connecting
-to existing known access points as users move or wireless-access
-points appear and disappear (*.e.g.,* phones with tethering).
+TODO
+----
+
++ Add boot time detecting and joining wireless networks
++ Create hostname.if files in locations
+
+
+Maybe Todo
+----------
++ Set and get values in hostname.if files. *E.g.,*
+```
+	$ doas netctl get home nwid
+	"Silly Wap"
+
+	$ doas netctl set home nwid "My WAP Name"
+
+	$ doas netctl set home dhcp on
+```
+
+
+Comments on Boot Time Configuration
+--------
 
 `netctl` is written in pure shell (using no commands outside of shell,
 **/bin** and **/sbin**), so that it can run at boot time when **/usr**
@@ -36,6 +54,7 @@ I think I can get automated location switching working at boot time. I
 already have code from an earlier project that will match wap scans to
 the correct configuration. I'm rewriting it in pure shell and
 integrating it for use during boot.
+
 
 Copyright and License
 ---------------------

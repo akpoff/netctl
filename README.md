@@ -54,7 +54,7 @@ Auto Detecting and Joining Networks
 
 Auto detecting and joining requires some setup. `netctl` will not
 connect to wireless access points that are not known. To create a
-*known* wap, a standard wireless **hostname.if** files should be
+*known* wap, a standard wireless **hostname.if** file should be
 created in **/etc/hostname.d/nwids**. *E.g.,*
 
 ```
@@ -74,7 +74,7 @@ local network (with `ifconfig iwm0 scan`) and attempt to match the
 results with the names of the **nwids** found by `ls`-ing
 **/etc/hostname.d/nwids**.
 
-**N.B.** `ifconfig scan` is called dwith *each* wlan device unless one
+**N.B.** `ifconfig scan` is called with *each* wlan device unless one
 is specified after the **start** parameter.
 
 

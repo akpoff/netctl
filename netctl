@@ -205,7 +205,8 @@ link_configuration() {
 		return
 
 	[ -f "${_from}" ] &&
-		ln -fs "${_from}" "${_to}" &&
+		cd /etc/ &&
+		ln -fs "${_from##/etc/}" "${_to}" &&
 		log_msg "Switch ${_if}" ||
 			log_warning "No configuration for ${_if}"
 

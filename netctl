@@ -225,9 +225,11 @@ ls_locations() {
 	for _l in "${_locations[@]}" ; do
 		log_msg "\t${_l}"
 	done
+
+	unset _l _locations
 }
 
-ls_configurations(){
+ls_configurations() {
 	local _c _configurations _l _locations
 	set -A _locations
 	set -A _configurations
@@ -246,9 +248,12 @@ ls_configurations(){
 
 		set -A _configurations
 	done
+
+
+	unset _c _configurations _l _locations
 }
 
-ls_interfaces(){
+ls_interfaces() {
 	local _if _ifs
 	set -A _ifs
 
@@ -258,6 +263,8 @@ ls_interfaces(){
 	for _if in "${_ifs[@]}" ; do
 		log_msg "\t${_if}"
 	done
+
+	unset _if _ifs
 }
 
 ls_waps() {
@@ -269,6 +276,8 @@ ls_waps() {
 		_nwid=${_nwid%%.nwid}
 		log_msg "\t${_nwid}"
 	done
+
+	unset _nwid _path _paths
 }
 
 # Get interface details

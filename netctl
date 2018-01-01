@@ -103,7 +103,8 @@ get_ifs() {
 		#_if=${_l%%*([[:blank:]])*():*}
 
 		# exclude if-type (san _if num) in pseudo-devices
-		[[ " ${_pseudo_devices[*]}0 " == *" ${_if%%*([[:digit:]])} "* ]] &&
+		[[ " ${_pseudo_devices[*]}0 " \
+			   == *" ${_if%%*([[:digit:]])} "* ]] &&
 			continue
 
 		_ifs[${#_ifs[*]}]="${_if}"
@@ -283,7 +284,8 @@ scan() {
 		[[ "${_l}" == *([[:blank::]])nwid* ]] || continue
 
 		[[ "${_verbose:-0}" -eq 1 ]] &&
-			_nwids[${#_nwids[*]}]="${_l%%*([[:blank:]])*()% *}%" &&
+			_nwids[${#_nwids[*]}] \
+			      ="${_l%%*([[:blank:]])*()% *}%" &&
 			continue
 
 		[[ "${_verbose:-0}" -eq 2 ]] &&
@@ -358,13 +360,14 @@ while getopts :adhnqrv opt ; do
 			((verbose++))
 			cmd="scan";;
 		:)
-			log_msg ${__progname}: option requires an argument \
-				-- ${OPTARG}
+			log_msg ${__progname}: option requires an \
+				argument -- ${OPTARG}
 			usage 2
 			exit
 			;;
 		\?)
-			log_msg ${__progname}: invalid option -- ${OPTARG}
+			log_msg ${__progname}: invalid option \
+				-- ${OPTARG}
 			usage 2
 			exit
 			;;
@@ -380,7 +383,8 @@ case ${cmd} in
 		[[ -z "$@" ]] && usage 2 && exit
 		shift 1
 		lsparms="$@"
-		[[ ${lsarg} == @(all|locations|configurations|interfaces|waps) ]] ||
+		[[ ${lsarg} == @(all|locations|configurations\
+					 |interfaces|waps) ]] ||
 			usage 2
 		;;
 	create)
@@ -414,12 +418,12 @@ case ${cmd} in
 			get_ifs wlan # throws its own errors
 			ifs="${_ifs[@]}"
 		elif [ ${autowap} -eq 1 ] && [ -n "${ifs}" ] ; then
-			# Check whether $ifs are in wlan group
+			# Check whether ${ifs} are in wlan group
 			get_ifs wlan # throws its own errors
 			for _if in ${ifs} ; do
 				[[ " ${_ifs} " == *" ${_if} "* ]] &&
-					continue ||
-						log_err "${_if} not in wlan group" 3
+					continue
+				log_err "${_if} not in wlan group" 3
 			done
 		else
 			get_ifs ${ifs} # throws its own errors
@@ -463,14 +467,14 @@ case ${cmd} in
 		;;
 	create)
 		for _loc in ${locations} ; do
-			mkdir -p "${HN_DIR}/${_loc}" ||
-				log_warning "Unable to create location ${_loc}"
+			mkdir -p "${HN_DIR}/${_loc}" && continue
+			log_warning "Unable to create location ${_loc}"
 		done
 		;;
 	delete)
 		for _loc in ${locations} ; do
-			rm -rf "${HN_DIR}/${_loc}" ||
-				log_warning "Unable to delete location ${_loc}"
+			rm -rf "${HN_DIR}/${_loc}" && continue
+			log_warning "Unable to delete location ${_loc}"
 		done
 		;;
 	switch)
@@ -487,8 +491,10 @@ case ${cmd} in
 			[ -f "${_from}" ] || continue
 
 			[ -f "${_from}" ] && ! [ -f "${_to}" ] &&
-				mv "${_from}" "${_to}" ||
-					log_warning "Unable to enable ${_if}"
+				mv "${_from}" "${_to}" &&
+				continue
+
+			log_warning "Unable to enable ${_if}"
 		done
 		;;
 	disable)
@@ -498,12 +504,15 @@ case ${cmd} in
 			[ -f "${_from}" ] || continue
 
 			[ -f "${_from}" ] &&
-				mv "${_from}" "${_to}" ||
-					log_warning "Unable to disable ${_if}"
+				mv "${_from}" "${_to}" &&
+				continue
+
+			log_warning "Unable to disable ${_if}"
 		done
 		;;
 	start|restart)
-		local _match _groups _media _status _ieee80211 _inet _inet6
+		local _match _groups _media _status _ieee80211 \
+		      _inet _inet6
 		set -A _match
 
 		for _if in ${ifs} ; do

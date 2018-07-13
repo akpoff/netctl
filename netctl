@@ -145,6 +145,7 @@ get_configurations() {
 # Restart interface
 # Usage: if_restart if1
 if_restart() {
+	echo if_restart
 	if_stop $1 && if_start $1
 }
 
@@ -154,8 +155,8 @@ if_start() {
 	local _if
 
 	_if=$1
-	[ ${dryrun} -eq 1 ] &&
-		log_msg /bin/sh /etc/netstart -p ${_if} ||
+	([ ${dryrun} -eq 1 ] &&
+		log_msg "/bin/sh /etc/netstart -p ${_if}") ||
 			/bin/sh /etc/netstart ${_if}
 }
 
@@ -165,7 +166,7 @@ if_stop() {
 	local _options _groups _media _status _ieee80211 _inet _inet6 \
 	      _key _wlan_keys _inet_keys _mode_keys _if
 
-	set -A _wlan_keys -- nwid chan mode nwkey powersave wpakey wpa
+	set -A _wlan_keys -- join nwid chan mode nwkey powersave wpakey wpa
 
 	_if=$1
 	get_if_conf ${_if}
@@ -182,8 +183,9 @@ if_stop() {
 	[ -n "${_inet6}" ] && _options="${_options} -inet6"
 
 	[ ${dryrun} -eq 1 ] &&
-		log_msg ifconfig ${_if} ${_options} down ||
-			ifconfig ${_if} ${_options} down
+		log_msg "ifconfig ${_if} ${_options} down delete" ||
+			(ifconfig ${_if} ${_options} down &&
+				 ifconfig ${_if} ${_options} down)
 }
 
 # Create link from configuration to /etc/hostname.if
@@ -370,14 +372,12 @@ while getopts :adhnqrv opt ; do
 			((verbose++))
 			cmd="scan";;
 		:)
-			log_msg ${__progname}: option requires an \
-				argument -- ${OPTARG}
+			log_msg "${__progname}: option requires an argument -- ${OPTARG}"
 			usage 2
 			exit
 			;;
 		\?)
-			log_msg ${__progname}: invalid option \
-				-- ${OPTARG}
+			log_msg "${__progname}: invalid option -- ${OPTARG}"
 			usage 2
 			exit
 			;;
@@ -532,10 +532,10 @@ case ${cmd} in
 			[[ "${_status}" == 'no network' ]] &&
 				log_warning "Stopping ${_if} ..." &&
 				if_stop ${_if}
-			wap_match ${_if}
-			[ -n "${_match}" ] || return
+#			wap_match ${_if}
+#			[ -n "${_match}" ] || return
 			_to="/etc/hostname.${_if}"
-			link_configuration ${_if} "${_match}" "${_to}"
+			#link_configuration ${_if} "${_match}" "${_to}"
 			if_restart ${_if}
 			ifconfig ${_if}
 		done

@@ -94,7 +94,7 @@ get_ifs() {
 	# use co-process to preserve values set in while loop
 	ifconfig $1 |&
 	while IFS=' 	' read -r -p _l; do
-		[[ "${_l}" == *flags* ]] || continue
+		[[ "${_l}" == *:\ flags* ]] || continue
 
 		_if=${_l%%*([[:blank:]])*():*}
 
